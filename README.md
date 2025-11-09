@@ -1,4 +1,6 @@
 # Бэкенд Mesto. Каркас API Mesto
+# Коланьков Никита Андреевич
+https://github.com/creamycoder/nodejs-mesto-project#
 
 ## Используемые технологии и решения
 - Typescript в качестве основного языка проекта
