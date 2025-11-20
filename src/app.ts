@@ -1,4 +1,5 @@
-import express, { Application, json } from 'express';
+import express, { Application, NextFunction, Response, json } from 'express';
+import { RequestCustom } from './type';
 import mongoose from 'mongoose';
 import router from './routes/index';
 
@@ -8,6 +9,14 @@ const app: Application = express();
 
 app.use(json());
 app.use('/', router);
+
+app.use((req: RequestCustom, res: Response, next: NextFunction) => {
+  req.user = {
+    _id: '5d8b8592978f8bd833ca8133'
+  };
+
+  next();
+});
 
 const connect = async () => {
   try {
