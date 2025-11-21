@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import user from './user';
 
 interface ICard extends Document {
   name: string,
@@ -22,7 +21,7 @@ const cardSchema = new mongoose.Schema<ICard>({
   },
   owner: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: user,
+    ref: 'user',
     required: true
   },
   likes: {

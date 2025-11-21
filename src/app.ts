@@ -8,15 +8,16 @@ const {PORT = 3000} = process.env;
 const app: Application = express();
 
 app.use(json());
-app.use('/', router);
 
 app.use((req: RequestCustom, res: Response, next: NextFunction) => {
   req.user = {
-    _id: '5d8b8592978f8bd833ca8133'
+    _id: '6910e54fbe49bb8540e76ddf'
   };
 
   next();
 });
+
+app.use('/', router);
 
 const connect = async () => {
   try {

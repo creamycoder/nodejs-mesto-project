@@ -1,5 +1,6 @@
 import { Request, Response } from "express";
 import User from '../models/user';
+import user from "../models/user";
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -24,10 +25,10 @@ export const createUser = async (req: Request, res: Response) => {
 };
 
 export const getUserById = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const { userId } = req.params;
 
   try {
-    const user = await User.findById(id);
+    const user = await User.findById(userId);
     return res.status(200).json({ data: user });
   } catch (error) {
     console.error(error);
