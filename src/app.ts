@@ -1,5 +1,5 @@
 import express, { Application, NextFunction, Response, json } from 'express';
-import { RequestCustom } from './type';
+import { RequestCustom } from './utils/type';
 import mongoose from 'mongoose';
 import router from './routes/index';
 
