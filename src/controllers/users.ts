@@ -2,7 +2,9 @@ import { Request, Response } from "express";
 import User from '../models/user';
 import { RequestCustom } from "utils/type";
 import STATUS from '../utils/constants';
+import { JWT_SECRET } from '../middlewares/auth';
 import bcrypt from 'bcrypt';
+import jwt from 'jsonwebtoken';
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -70,4 +72,30 @@ export const updateAvatar = async (req: RequestCustom, res: Response) => {
   }
 };
 
-export default { getUsers, createUser, getUserById, updateProfile, updateAvatar };
+export const login = async (req: RequestCustom, res: Response) => {
+  try {
+    const { email, password } = req.body;
+    const user = await User.findOne({ email }).select('+password');
+    if (!user) return res.status(STATUS.UNAUTHORIZED).send({ "message": "Неправильные почта или пароль" });
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) return res.status(STATUS.UNAUTHORIZED).send({ "message": "Неправильные почта или пароль" });
+    const token = jwt.sign(
+      { _id: user._id.toString() },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+    res
+      .cookie('jwt', token, {
+        httpOnly: true,
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+        sameSite: true
+      })
+      .status(200)
+      .json({ token, message: 'Успешная авторизация' });
+  } catch(error: any) {
+    console.error(error);
+    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
+  }
+};
+
+export default { getUsers, createUser, getUserById, updateProfile, updateAvatar, login };

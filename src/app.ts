@@ -2,6 +2,8 @@ import express, { Application, NextFunction, Response, json } from 'express';
 import { RequestCustom } from './utils/type';
 import mongoose from 'mongoose';
 import router from './routes/index';
+import { login, createUser } from './controllers/users';
+import auth from './middlewares/auth';
 
 const {PORT = 3000} = process.env;
 
@@ -16,6 +18,11 @@ app.use((req: RequestCustom, res: Response, next: NextFunction) => {
 
   next();
 });
+
+app.post('/signin', login);
+app.post('/signup', createUser);
+
+app.use(auth);
 
 app.use('/', router);
 

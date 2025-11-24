@@ -1,4 +1,4 @@
-import mongoose from 'mongoose';
+import mongoose, { Model } from 'mongoose';
 import validator from 'validator';
 
 interface IUser extends Document {
@@ -7,6 +7,9 @@ interface IUser extends Document {
   avatar: string,
   email: string,
   password: string
+}
+
+interface UserModel extends Model<IUser> {
 }
 
 const userSchema = new mongoose.Schema<IUser>({
