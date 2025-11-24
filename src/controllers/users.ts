@@ -2,6 +2,7 @@ import { Request, Response } from "express";
 import User from '../models/user';
 import { RequestCustom } from "utils/type";
 import STATUS from '../utils/constants';
+import bcrypt from 'bcrypt';
 
 export const getUsers = async (req: Request, res: Response) => {
   try {
@@ -15,8 +16,10 @@ export const getUsers = async (req: Request, res: Response) => {
 
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { name, about, avatar } = req.body;
-    const user = await User.create({ name, about, avatar });
+    const { name, about, avatar, email, password } = req.body;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+    const user = await User.create({ name, about, avatar, email, password: hashedPassword });
 
     return res.status(STATUS.CREATED).json(user);
   } catch (error: any) {
