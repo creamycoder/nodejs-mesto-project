@@ -27,12 +27,17 @@ export const getCards = async (req: Request, res: Response) => {
   }
 };
 
-export const deleteCard = async (req: Request, res: Response) => {
+export const deleteCard = async (req: RequestCustom, res: Response) => {
   try {
     const { cardId } = req.params;
-    const card = await Card.findByIdAndDelete(cardId);
+    const card = await Card.findById(cardId);
+
     if (!card) return res.status(STATUS.NOT_FOUND).send({ "message": "Карточки с указанным _id не найдена" });
-    return res.status(STATUS.NO_CONTENT).send();
+    if (card.owner.toString() !== req.user?._id) return res.status(STATUS.FORBIDDEN).send({ "message": "Нельзя удалить чужую карточку" });
+
+    await card.deleteOne();
+
+    return res.status(STATUS.OK).json({ "message": "Карточка удалена" });
   } catch (error: any) {
     console.error(error);
     if (error.name === 'CastError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Передан некорректный _id карточки" });

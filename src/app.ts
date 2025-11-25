@@ -3,6 +3,7 @@ import mongoose from 'mongoose';
 import router from './routes/index';
 import { login, createUser } from './controllers/users';
 import auth from './middlewares/auth';
+import { requestLogger, errorLogger } from './middlewares/logger';
 
 const {PORT = 3000} = process.env;
 
@@ -10,12 +11,16 @@ const app: Application = express();
 
 app.use(json());
 
+app.use(requestLogger);
+
 app.post('/signin', login);
 app.post('/signup', createUser);
 
 app.use(auth);
 
 app.use('/', router);
+
+app.use(errorLogger);
 
 app.use((req, res) => {
   res.status(404).send({ "message": "Страница не найдена" });
