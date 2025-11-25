@@ -1,76 +1,70 @@
 import Card from "../models/card";
-import { Response, Request } from "express";
+import { Response, Request, NextFunction } from "express";
 import { RequestCustom } from "../utils/type";
 import STATUS from '../utils/constants';
 
-export const createCard = async (req: RequestCustom, res: Response) => {
-  try {
-    const { name, link } = req.body;
-    const owner = req.user?._id;
-    if (!owner) return res.status(STATUS.BAD_REQUEST).send({ "message": "Переданы некорректные данные при создании карточки" });
-    const card = await Card.create({ name, link, owner });
-    return res.status(STATUS.CREATED).json(card);
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'ValidationError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Переданы некорректные данные при создании карточки" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+const CustomError = require('../errors/customErrors');
+
+export const getCards = async (req: Request, res: Response, next: NextFunction) => {
+  Card.find({})
+    .then(cards => res.send(cards))
+    .catch(next);
 };
 
-export const getCards = async (req: Request, res: Response) => {
-  try {
-    const cards = await Card.find({});
-    return res.status(STATUS.OK).json(cards);
-  } catch (error) {
-    console.error(error);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const createCard = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  const { name, link } = req.body;
+
+  Card.create({ name, link, owner: req.user?._id })
+    .then(card => res.send(card))
+    .catch(err => {
+      if (err.name === 'ValidationError') return next(CustomError.BadRequest('Некорректные данные карты'));
+      next(err);
+    })
 };
 
-export const deleteCard = async (req: RequestCustom, res: Response) => {
-  try {
-    const { cardId } = req.params;
-    const card = await Card.findById(cardId);
-
-    if (!card) return res.status(STATUS.NOT_FOUND).send({ "message": "Карточки с указанным _id не найдена" });
-    if (card.owner.toString() !== req.user?._id) return res.status(STATUS.FORBIDDEN).send({ "message": "Нельзя удалить чужую карточку" });
-
-    await card.deleteOne();
-
-    return res.status(STATUS.OK).json({ "message": "Карточка удалена" });
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'CastError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Передан некорректный _id карточки" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const deleteCard = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  Card.findById(req.params.cardId)
+    .then(card => {
+      if (!card) return next(CustomError.NotFound('Карточка не найдена'));
+      if (card.owner.toString() !== req.user?._id) return next(CustomError.Forbidden('Нельзя удалять чужие карточки'));
+      return card.deleteOne().then(() => res.send({ message: 'Карточка удалена' }));
+    })
+    .catch(err => {
+      if (err.name === 'CastError') return next(CustomError.BadRequest('Некорректный ID карточки'));
+      next(err);
+    })
 };
 
-export const likeCard = async (req: RequestCustom, res: Response) => {
-  try {
-    const { cardId } = req.params;
-    const id = req.user?._id;
-    const card = await Card.findByIdAndUpdate(cardId, { $addToSet: { likes: id }}, { new: true });
-    if (!card) return res.status(STATUS.NOT_FOUND).send({ "message": "Передан несуществующий _id карточки" });
-    return res.status(STATUS.OK).json(card);
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'CastError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Переданы некорректные данные для постановки лайка" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const likeCard = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  Card.findByIdAndUpdate(
+    req.params.cardId,
+    { $addToSet: { likes: req.user?._id } },
+    { new: true }
+  )
+    .then(card => {
+      if (!card) return next(CustomError.NotFound('Карточка не найдена'));
+      return res.send({card});
+    })
+    .catch(err => {
+      if (err.name === 'CastError') return next(CustomError.BadRequest('Некорректный ID карточки'));
+      next(err);
+    })
 };
 
-export const dislikeCard = async (req: RequestCustom, res: Response) => {
-  try {
-    const { cardId } = req.params;
-    const id = req.user?._id;
-    const card = await Card.findByIdAndUpdate(cardId, { $pull: { likes: id }}, { new: true });
-    if (!card) return res.status(STATUS.NOT_FOUND).send({ "message": "Передан несуществующий _id карточки" });
-    return res.status(STATUS.OK).json(card);
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'CastError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Переданы некорректные данные для постановки лайка" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const dislikeCard = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  Card.findByIdAndUpdate(
+    req.params.cardId,
+    { $pull: { likes: req.user?._id } },
+    { new: true }
+  )
+    .then(card => {
+      if (!card) return next(CustomError.NotFound('Карточка не найдена'));
+      return res.send({card});
+    })
+    .catch(err => {
+      if (err.name === 'CastError') return next(CustomError.BadRequest('Некорректный ID карточки'));
+      next(err);
+    })
 };
 
 export default { createCard, getCards, deleteCard, likeCard, dislikeCard };

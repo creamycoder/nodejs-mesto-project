@@ -4,6 +4,8 @@ import router from './routes/index';
 import { login, createUser } from './controllers/users';
 import auth from './middlewares/auth';
 import { requestLogger, errorLogger } from './middlewares/logger';
+import errorHandler from './middlewares/errorHandler';
+
 
 const {PORT = 3000} = process.env;
 
@@ -21,6 +23,8 @@ app.use(auth);
 app.use('/', router);
 
 app.use(errorLogger);
+
+app.use(errorHandler);
 
 app.use((req, res) => {
   res.status(404).send({ "message": "Страница не найдена" });

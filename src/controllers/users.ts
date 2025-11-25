@@ -1,121 +1,112 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import User from '../models/user';
 import { RequestCustom } from "utils/type";
-import STATUS from '../utils/constants';
 import { JWT_SECRET } from '../middlewares/auth';
-import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 
-export const getUsers = async (req: Request, res: Response) => {
-  try {
-    const users = await User.find({});
-    return res.status(STATUS.OK).json(users);
-  } catch (error) {
-    console.error(error);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+const CustomError = require('../errors/customErrors');
+
+export const getUsers = async (req: Request, res: Response, next: NextFunction) => {
+  User.find({})
+    .then(users => res.send(users))
+    .catch(next);
 };
 
-export const createUser = async (req: Request, res: Response) => {
-  try {
-    const { name, about, avatar, email, password } = req.body;
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    const user = await User.create({ name, about, avatar, email, password: hashedPassword });
-
-    return res.status(STATUS.CREATED).json(user);
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'ValidationError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Переданы некорректные данные при создании пользователя" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const getUserById = async (req: Request, res: Response, next: NextFunction) => {
+  User.findById(req.params.userId)
+    .then(user => {
+      if (!user) return next(CustomError.NotFound('Пользователь не найден'));
+      res.send(user);
+    })
+    .catch(err => {
+      if (err.name === 'CastError') return next(CustomError.BadRequest('Некорректный ID пользователя'));
+      next(err);
+    })
 };
 
-export const getUserById = async (req: Request, res: Response) => {
-  try {
-    const { userId } = req.params;
-    const user = await User.findById(userId);
-    if (!user) return res.status(STATUS.NOT_FOUND).send({ "message": "Пользователь по указанному _id не найден" });
-    return res.status(STATUS.OK).json(user);
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'CastError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Передан некорректный _id пользователя" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const createUser = async (req: Request, res: Response, next: NextFunction) => {
+  const { name, about, avatar, email, password } = req.body;
+
+  User.create({ name, about, avatar, email, password })
+    .then(user => res.send(user))
+    .catch(err => {
+      if (err.name === 'ValidationError') return next(CustomError.BadRequest('Некорректные данные при создании пользователя'));
+      if (err.code === 11000) return next(CustomError.Conflict('Пользователь с таким email уже существует'));
+      next(err);
+    })
 };
 
-export const updateProfile = async (req: RequestCustom, res: Response) => {
-  try {
-    const { name, about } = req.body;
-    const id = req.user?._id;
-    const user = await User.findByIdAndUpdate(id, { name, about }, { new: true });
-    if (!user) return res.status(STATUS.NOT_FOUND).send({ "message": "Пользователь с указанным _id не найден" });
-    return res.status(STATUS.OK).json(user);
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'ValidationError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Переданы некорректные данные при обновлении профиля" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const updateUser = (req: RequestCustom, res: Response, next: NextFunction) => {
+  const { name, about } = req.body;
+
+  User.findByIdAndUpdate(
+    req.user?._id,
+    { name, about },
+    { new: true, runValidators: true }
+  )
+    .then(user => {
+      if (!user) return next(CustomError.NotFound('Пользователь не найден'));
+      res.send(user);
+    })
+    .catch(err => {
+      if (err.name === 'ValidationError') return next(CustomError.BadRequest('Некорректные данные профиля'));
+      next(err);
+    })
+}
+
+export const updateAvatar = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  const { avatar } = req.body;
+
+  User.findByIdAndUpdate(
+    req.user?._id,
+    { avatar },
+    { new: true, runValidators: true }
+  )
+    .then(user => {
+      if (!user) return next(CustomError.NotFound('Пользователь не найден'));
+      res.send(user);
+    })
+    .catch(err => {
+      if (err.name === 'ValidationError') return next(CustomError.BadRequest('Некорректные данные аватара'));
+      next(err);
+    })
 };
 
-export const updateAvatar = async (req: RequestCustom, res: Response) => {
-  try {
-    const { avatar } = req.body;
-    const id = req.user?._id;
-    const user = await User.findByIdAndUpdate(id, { avatar }, { new: true });
-    if (!user) return res.status(STATUS.NOT_FOUND).send({ "message": "Пользователь с указанным _id не найден" });
-    return res.status(STATUS.OK).json(user);
-  } catch (error: any) {
-    console.error(error);
-    if (error.name === 'ValidationError') return res.status(STATUS.BAD_REQUEST).send({ "message": "Переданы некорректные данные при обновлении аватара" });
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
-};
+export const login = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  const { email, password } = req.body;
 
-export const login = async (req: RequestCustom, res: Response) => {
-  try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email }).select('+password');
-    if (!user) return res.status(STATUS.UNAUTHORIZED).send({ "message": "Неправильные почта или пароль" });
-    const isPasswordMatch = await bcrypt.compare(password, user.password);
-    if (!isPasswordMatch) return res.status(STATUS.UNAUTHORIZED).send({ "message": "Неправильные почта или пароль" });
-    const token = jwt.sign(
-      { _id: user._id.toString() },
-      JWT_SECRET,
-      { expiresIn: '7d' }
-    );
-    res
-      .cookie('jwt', token, {
+  User.findUserByCredentials(email, password)
+    .then(user => {
+      const token = jwt.sign(
+        { _id: user._id },
+        JWT_SECRET,
+        { expiresIn: '7d' }
+      );
+      res.cookie('jwt', token, {
         httpOnly: true,
         maxAge: 7 * 24 * 60 * 60 * 1000,
         sameSite: true
-      })
-      .status(200)
-      .json({ token, message: 'Успешная авторизация' });
-  } catch(error: any) {
-    console.error(error);
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+      });
+
+      res.send({ token, message: 'Успешная авторизация' });
+    })
+    .catch(() => {
+      next(CustomError.Unauthorized('Неверный email или пароль'));
+    })
 };
 
-export const getCurrentUser = async (req: RequestCustom, res: Response) => {
-  try {
-    const userId = req.user?._id;
-
-    if (!userId) {
-      return res.status(STATUS.UNAUTHORIZED).send({ "message": "Требуется авторизация" });
-    }
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      return res.status(STATUS.NOT_FOUND).send({ "message": "Пользователь не найден" });
-    }
-
-    return res.status(STATUS.OK).json(user);
-  } catch (error) {
-    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
-  }
+export const getCurrentUser = async (req: RequestCustom, res: Response, next: NextFunction) => {
+  const userId = req.user?._id;
+  if (!userId) return next(CustomError.Unauthorized('Требуется авторизация'));
+  User.findById(userId)
+    .then(user => {
+      if (!user) return next(CustomError.NotFound('Пользователь не найден'));
+      return res.send(user);
+    })
+    .catch(err => {
+      if (err.name === 'CastError') return next(CustomError.BadRequest('Некорректный ID пользователя'));
+      next(err);
+    })
 };
 
-export default { getUsers, createUser, getUserById, updateProfile, updateAvatar, login, getCurrentUser };
+export default { getUsers, createUser, getUserById, updateUser, updateAvatar, login, getCurrentUser };
