@@ -3,6 +3,7 @@ import validator from 'validator';
 import bcrypt from 'bcrypt';
 
 const CustomError = require('../errors/customErrors');
+const urlRegex = /^https?:\/\/(www\.)?[\w\-._~:/?#[@!$&'()*+,;=]+\.([a-z]{2,})([\w\-._~:/?#[@!$&'()*+,;=]*)#?$/i;
 
 interface IUser extends Document {
   _id: Types.ObjectId;
@@ -32,7 +33,11 @@ const userSchema = new mongoose.Schema<IUser>({
   },
   avatar: {
     type: String,
-    default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png'
+    default: 'https://pictures.s3.yandex.net/resources/jacques-cousteau_1604399756.png',
+    validate: {
+      validator: (v: string) => urlRegex.test(v),
+      message: 'Некорректный URL аватара',
+    }
   },
   email: {
     type: String,

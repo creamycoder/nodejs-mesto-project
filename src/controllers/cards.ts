@@ -1,7 +1,6 @@
 import Card from "../models/card";
 import { Response, Request, NextFunction } from "express";
 import { RequestCustom } from "../utils/type";
-import STATUS from '../utils/constants';
 
 const CustomError = require('../errors/customErrors');
 
