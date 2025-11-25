@@ -5,7 +5,7 @@ import { AuthRequest } from "utils/type";
 export const { JWT_SECRET = 'dev-secret' } = process.env;
 
 const authMiddleware = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  const { authorization } = req.body;
+  const { authorization } = req.headers;
 
   if (!authorization || !authorization.startsWith('Bearer ')) {
     return res.status(401).send({ message: 'Необходима авторизация' });

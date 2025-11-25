@@ -98,4 +98,24 @@ export const login = async (req: RequestCustom, res: Response) => {
   }
 };
 
-export default { getUsers, createUser, getUserById, updateProfile, updateAvatar, login };
+export const getCurrentUser = async (req: RequestCustom, res: Response) => {
+  try {
+    const userId = req.user?._id;
+
+    if (!userId) {
+      return res.status(STATUS.UNAUTHORIZED).send({ "message": "Требуется авторизация" });
+    }
+
+    const user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(STATUS.NOT_FOUND).send({ "message": "Пользователь не найден" });
+    }
+
+    return res.status(STATUS.OK).json(user);
+  } catch (error) {
+    return res.status(STATUS.INTERNAL_SERVER_ERROR).send({ "message": "На сервере произошла ошибка" });
+  }
+};
+
+export default { getUsers, createUser, getUserById, updateProfile, updateAvatar, login, getCurrentUser };

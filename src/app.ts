@@ -1,5 +1,4 @@
 import express, { Application, NextFunction, Response, json } from 'express';
-import { RequestCustom } from './utils/type';
 import mongoose from 'mongoose';
 import router from './routes/index';
 import { login, createUser } from './controllers/users';
@@ -11,20 +10,16 @@ const app: Application = express();
 
 app.use(json());
 
-app.use((req: RequestCustom, res: Response, next: NextFunction) => {
-  req.user = {
-    _id: '6910e54fbe49bb8540e76ddf'
-  };
-
-  next();
-});
-
 app.post('/signin', login);
 app.post('/signup', createUser);
 
 app.use(auth);
 
 app.use('/', router);
+
+app.use((req, res) => {
+  res.status(404).send({ "message": "Страница не найдена" });
+});
 
 const connect = async () => {
   try {
