@@ -8,7 +8,6 @@ import errorHandler from './middlewares/errorHandler';
 import { validateSignin, validateSignup } from './middlewares/validation';
 import { errors } from 'celebrate';
 
-
 const {PORT = 3000} = process.env;
 
 const app: Application = express();
@@ -22,9 +21,6 @@ app.use('/', router);
 app.use(errorLogger);
 app.use(errors());
 app.use(errorHandler);
-app.use((req, res) => {
-  res.status(404).send({ "message": "Страница не найдена" });
-});
 
 const connect = async () => {
   try {

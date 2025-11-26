@@ -3,6 +3,7 @@ import User from '../models/user';
 import { RequestCustom } from "utils/type";
 import { JWT_SECRET } from '../middlewares/auth';
 import jwt from 'jsonwebtoken';
+import bcrypt from 'bcrypt';
 
 const CustomError = require('../errors/customErrors');
 
@@ -27,8 +28,8 @@ export const getUserById = async (req: Request, res: Response, next: NextFunctio
 export const createUser = async (req: Request, res: Response, next: NextFunction) => {
   const { name, about, avatar, email, password } = req.body;
 
-  User.create({ name, about, avatar, email, password })
-    .then(user => res.send(user))
+  User.create({ name, about, avatar, email, password: await bcrypt.hash(password, 10) })
+    .then(user => res.send({ name: user.name, about: user.about, avatar: user.avatar, email: user.email, _id: user._id }))
     .catch(err => {
       if (err.name === 'ValidationError') return next(CustomError.BadRequest('Некорректные данные при создании пользователя'));
       if (err.code === 11000) return next(CustomError.Conflict('Пользователь с таким email уже существует'));
